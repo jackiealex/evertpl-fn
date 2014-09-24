@@ -64,8 +64,7 @@ _extend(FN.prototype, {
 				});
 			} catch(e) {
 				err = e
-				console.error('err in evertpl-fn')
-				if (e.error_code) {
+				if (err.error_code) {
 					this.options['onMessage'].call(this, 'ignore', {
 						filename: tmplName
 					});
