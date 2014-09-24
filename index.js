@@ -1,8 +1,8 @@
 var glob = require('glob');
 var mkdirp = require('mkdirp');
-var template = require('../smartjs/template');
+var template = require('evertpl');
 var path = require('path');
-
+var Q = require('q');
 // set log string color
 require('colors');
 
@@ -16,6 +16,7 @@ function _extend(a, b) {
 
 function FN (options) {
 	var defaultConfig = {
+		onMessage: function(type, msg) {},
 		src: '',
 		selector: '',
 		dist: ''
@@ -31,6 +32,7 @@ _extend(FN.prototype, {
 			cacheDir: this.options.dist,
 			cacheMode: 'development',
 			errorType: 'json',
+
 			keepComments: false
 		});
 
@@ -50,21 +52,31 @@ _extend(FN.prototype, {
 		if(len > 0) {
 			mkdirp.sync(this.options.dist);
 		}
-		var startTime = +new Date();
+		var ignoreList = []
 		for(var i=0; i < len; i++) {
 			var tmplName = fileList[i];
 			var tmplPath = path.join(this.options.src, tmplName);
+			var err = null
 			try  {
 				template.renderFile(tmplName);
+				this.options['onMessage'].call(this, 'compile', {
+					filename: tmplName
+				});
 			} catch(e) {
+				err = e
+				console.error('err in evertpl-fn')
 				if (e.error_code) {
-					console.log('ignore parent template file -- '.green, e.filename);
+					this.options['onMessage'].call(this, 'ignore', {
+						filename: tmplName
+					});
+					ignoreList.push(e.filename)
 				}
 			}
 		}
-		var endTime = + new Date();
-		var summary = 'compile time: ' + (endTime - startTime)/ 1000 + 's';
-		console.log(summary.blue);
+
+		this.options['onMessage'].call(this, 'finish', {
+			ignored: ignoreList
+		});
 	}
 });
 
